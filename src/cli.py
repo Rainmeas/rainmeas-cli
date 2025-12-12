@@ -1,9 +1,41 @@
 import sys
 import argparse
 from typing import List
-import registry
-import installer
-import utils
+import os
+
+# Handle PyInstaller environment
+def resource_path(relative_path):
+    """Get absolute path to resource, works for dev and for PyInstaller"""
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+
+    return os.path.join(base_path, relative_path)
+
+# Dynamic imports to handle PyInstaller
+def import_modules():
+    """Dynamically import modules to handle PyInstaller bundling"""
+    try:
+        import registry
+        import installer
+        import utils
+        return registry, installer, utils
+    except ImportError:
+        # Try alternative import paths for PyInstaller
+        sys.path.append(resource_path('src'))
+        import registry
+        import installer
+        import utils
+        return registry, installer, utils
+
+# Import modules
+try:
+    registry, installer, utils = import_modules()
+except Exception as e:
+    print(f"Error importing modules: {e}")
+    sys.exit(1)
 
 class RainmeasCLI:
     def __init__(self):
@@ -226,3 +258,12 @@ class RainmeasCLI:
         """Show version"""
         print("rainmeas 0.1.0")
         return 0
+
+def main():
+    """Main entry point"""
+    cli = RainmeasCLI()
+    exit_code = cli.run(sys.argv[1:])
+    sys.exit(exit_code)
+
+if __name__ == "__main__":
+    main()

@@ -1,6 +1,18 @@
 import os
 import json
+import sys
 from typing import Dict, Any, Optional
+
+# Handle PyInstaller environment
+def resource_path(relative_path):
+    """Get absolute path to resource, works for dev and for PyInstaller"""
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+
+    return os.path.join(base_path, relative_path)
 
 def find_rainmeter_skin_root(start_path: str = ".") -> Optional[str]:
     """Find the root of a Rainmeter skin by looking for key files/directories"""

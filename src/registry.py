@@ -1,20 +1,35 @@
 import json
 import os
+import sys
 from typing import Dict, Any, Optional, List
+
+# Handle PyInstaller environment
+def resource_path(relative_path):
+    """Get absolute path to resource, works for dev and for PyInstaller"""
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+
+    return os.path.join(base_path, relative_path)
 
 class Registry:
     def __init__(self, registry_path: str = "d:/GITHUB/Rainmeter/Skins/rainmeas-registry"):
         self.registry_path = registry_path
-        self.index_file = os.path.join(registry_path, "index.json")
         self.packages_dir = os.path.join(registry_path, "packages")
     
-    def load_index(self) -> Dict[str, Any]:
-        """Load the registry index file"""
-        if not os.path.exists(self.index_file):
-            return {}
+    def list_all_package_names(self) -> List[str]:
+        """List all package names by scanning the packages directory"""
+        if not os.path.exists(self.packages_dir):
+            return []
         
-        with open(self.index_file, 'r') as f:
-            return json.load(f)
+        package_names = []
+        for filename in os.listdir(self.packages_dir):
+            if filename.endswith(".json"):
+                package_names.append(filename[:-5])  # Remove .json extension
+        
+        return package_names
     
     def get_package_info(self, package_name: str) -> Optional[Dict[str, Any]]:
         """Get information about a specific package"""
@@ -28,20 +43,34 @@ class Registry:
     
     def search_packages(self, query: str) -> Dict[str, Any]:
         """Search for packages matching a query"""
-        index = self.load_index()
         results = {}
         
-        for package_name, package_info in index.items():
+        # Scan all package files directly
+        for package_name in self.list_all_package_names():
+            package_info = self.get_package_info(package_name)
+            if not package_info:
+                continue
+            
+            # Match by package name
             if query.lower() in package_name.lower():
-                results[package_name] = package_info
+                # Create a simplified info object for search results
+                latest_version = self.get_latest_version(package_name)
+                versions = self.get_available_versions(package_name)
+                results[package_name] = {
+                    "latest": latest_version or "unknown",
+                    "versions": versions
+                }
             else:
-                # Check package details for matches
-                package_details = self.get_package_info(package_name)
-                if package_details and (
-                    query.lower() in package_details.get("description", "").lower() or
-                    query.lower() in package_details.get("author", "").lower()
-                ):
-                    results[package_name] = package_info
+                # Match by package details
+                if (query.lower() in package_info.get("description", "").lower() or
+                    query.lower() in package_info.get("author", "").lower()):
+                    # Create a simplified info object for search results
+                    latest_version = self.get_latest_version(package_name)
+                    versions = self.get_available_versions(package_name)
+                    results[package_name] = {
+                        "latest": latest_version or "unknown",
+                        "versions": versions
+                    }
         
         return results
     
@@ -52,7 +81,7 @@ class Registry:
         if not package_info:
             return None
         
-        # Get latest version from the package file, not index.json
+        # Get latest version from the package file
         versions = package_info.get("versions", {})
         if "latest" in versions:
             return versions["latest"]
@@ -88,7 +117,3 @@ class Registry:
             return versions[version].get("download")
         
         return None
-    
-    def list_all_packages(self) -> Dict[str, Any]:
-        """List all available packages"""
-        return self.load_index()
