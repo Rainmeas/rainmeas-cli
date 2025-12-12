@@ -4,7 +4,13 @@ Rainmeas is a package manager for Rainmeter skins that simplifies the installati
 
 ## Installation
 
-To install Rainmeas, run:
+### Using the Installer (Recommended)
+
+Download the latest installer (`rainmeas-setup.exe`) from the releases page and run it to install Rainmeas with automatic PATH integration.
+
+### Manual Installation
+
+To install Rainmeas manually, run:
 
 ```bash
 pip install .
@@ -54,6 +60,62 @@ rainmeas list
 
 # Search for packages
 rainmeas search weather
+```
+
+## Building from Source
+
+### Prerequisites
+
+- Python 3.6 or higher
+- PyInstaller (automatically installed if missing)
+- NSIS (optional, for creating installer)
+
+### Build Process
+
+To build the executable and installer:
+
+```bash
+# On Windows
+powershell -ExecutionPolicy Bypass -File Build.ps1
+```
+
+This will:
+1. Create a standalone executable using PyInstaller
+2. Build an NSIS installer (if NSIS is installed)
+
+If NSIS is not installed, only the executable will be created. You can install NSIS from [NSIS Official Website](https://nsis.sourceforge.io/Download).
+
+### Manual Build Steps
+
+1. Build the executable:
+   ```bash
+   pip install pyinstaller
+   pyinstaller --onefile --console --icon="assets/icon.ico" --name="rainmeas" --distpath="dist" run_cli.py
+   ```
+
+2. Build the installer (requires NSIS):
+   ```bash
+   # If NSIS is in your PATH
+   makensis nsi-installer/setup.nsi
+   
+   # Or use the full path (common locations)
+   "C:\Program Files (x86)\NSIS\makensis.exe" nsi-installer/setup.nsi
+   "C:\Program Files\NSIS\makensis.exe" nsi-installer/setup.nsi
+   ```
+
+### Testing the Build
+
+You can verify that the build process works correctly by running:
+
+```bash
+# Test the executable
+dist\rainmeas.exe --version
+
+# Test the installer build (if NSIS is installed)
+powershell -ExecutionPolicy Bypass -File TestInstallerBuild.ps1
+
+# Check the final installer
+powershell -ExecutionPolicy Bypass -File TestInstaller.ps1
 ```
 
 ## Registry
