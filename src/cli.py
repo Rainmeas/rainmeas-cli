@@ -199,12 +199,14 @@ class RainmeasCLI:
         print(f"License: {info.get('license', 'Unknown')}")
         print(f"Homepage: {info.get('homepage', 'None')}")
         
-        versions = info.get('versions', {})
-        if versions:
-            print("Available versions:")
-            for version in versions.keys():
-                if version != "latest":
-                    print(f"  {version}")
+        # Show version information
+        latest_version = self.registry.get_latest_version(package_name)
+        if latest_version:
+            print(f"Latest version: {latest_version}")
+        
+        available_versions = self.registry.get_available_versions(package_name)
+        if available_versions:
+            print(f"Available versions: {', '.join(available_versions)}")
         
         return 0
     

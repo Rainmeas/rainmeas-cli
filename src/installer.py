@@ -27,25 +27,34 @@ class Installer:
                 return False
         
         # Check if version exists
-        if version not in package_info.get("versions", {}):
+        available_versions = self.registry.get_available_versions(package_name)
+        if version not in available_versions:
             print(f"Version '{version}' not found for package '{package_name}'")
+            print(f"Available versions: {', '.join(available_versions)}")
+            return False
+        
+        # Get download URL
+        download_url = self.registry.get_version_download_url(package_name, version)
+        if not download_url:
+            print(f"No download URL found for {package_name}@{version}")
             return False
         
         # Create modules directory if it doesn't exist
         os.makedirs(self.modules_dir, exist_ok=True)
         
-        # Download and extract package (placeholder implementation)
+        # Download and extract package
         print(f"Installing {package_name}@{version}...")
+        print(f"Download URL: {download_url}")
         # In a real implementation, we would download and extract the package here
         
         # For now, just create a placeholder directory
         package_dir = os.path.join(self.modules_dir, package_name)
         os.makedirs(package_dir, exist_ok=True)
         
-        # Create a placeholder file
+        # Create a placeholder file with version info
         placeholder_file = os.path.join(package_dir, "README.md")
         with open(placeholder_file, "w") as f:
-            f.write(f"# {package_name}\n\nInstalled version: {version}\n")
+            f.write(f"# {package_name}\n\nInstalled version: {version}\nDownload URL: {download_url}\n")
         
         # Update rainmeas config
         self._update_config(package_name, version)
