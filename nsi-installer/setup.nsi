@@ -2,11 +2,14 @@
 ; Rainmeas Installer Script
 ;--------------------------------
 
+; Define global version variable
+!define VERSION "0.0.1"
+
 ; The name of the installer
 Name "Rainmeas"
 
 ; The file to write
-OutFile "..\dist\rainmeas_v0.0.1_setup.exe"
+OutFile "..\dist\rainmeas_v${VERSION}_setup.exe"
 
 ; The default installation directory
 InstallDir "$PROGRAMFILES\Rainmeas"
@@ -32,6 +35,10 @@ RequestExecutionLevel admin
 !ifndef HWND_BROADCAST
 !define HWND_BROADCAST 0xFFFF
 !endif
+
+;--------------------------------
+; EnVar Plugin for PATH manipulation
+;--------------------------------
 
 ; Icon
 !define MUI_ICON "assets\installer.ico"
@@ -96,7 +103,7 @@ Section "Rainmeas" SecMain
   
   ; Add to Add/Remove Programs
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Rainmeas" \
-                   "DisplayName" "Rainmeas v0.0.1"
+                   "DisplayName" "Rainmeas v${VERSION}"
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Rainmeas" \
                    "UninstallString" "$INSTDIR\Uninstall.exe"
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Rainmeas" \
@@ -106,7 +113,7 @@ Section "Rainmeas" SecMain
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Rainmeas" \
                    "HelpLink" "https://github.com/Rainmeas/rainmeas"
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Rainmeas" \
-                   "DisplayVersion" "0.0.1"
+                   "DisplayVersion" "${VERSION}"
   WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Rainmeas" \
                    "NoModify" 1
   WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Rainmeas" \
@@ -117,16 +124,11 @@ SectionEnd
 ; Optional section (can be disabled by the user)
 Section "Add to PATH" SecPATH
 
-  ; Add the installation directory to the PATH
-  ; Read the current PATH
-  ReadEnvStr $R0 "PATH"
-  ; Append our installation directory to the PATH
-  StrCpy $R1 "$R0;$INSTDIR"
-  ; Write the updated PATH back to the registry
-  WriteRegStr HKLM "SYSTEM\CurrentControlSet\Control\Session Manager\Environment" "PATH" $R1
-  
-  ; Send a message to all applications to let them know the PATH has changed
-  SendMessage ${HWND_BROADCAST} ${WM_WININICHANGE} 0 "STR:Environment" /TIMEOUT=5000
+  ; Add the installation directory to the PATH using EnVar plugin
+  EnVar::SetHKLM
+  EnVar::AddValue "PATH" "$INSTDIR"
+  Pop $0
+  DetailPrint "Add to PATH returned=|$0|"
   
 SectionEnd
 
@@ -160,6 +162,15 @@ LangString DESC_SecDesktop ${LANG_ENGLISH} "Create a desktop shortcut for Rainme
 
 Section "Uninstall"
 
+  ; Read the installation directory from the registry BEFORE deleting registry keys
+  ReadRegStr $INSTDIR HKLM "Software\Rainmeas" "Install_Dir"
+  
+  ; Remove rainmeas from PATH using EnVar plugin
+  EnVar::SetHKLM
+  EnVar::DeleteValue "PATH" "$INSTDIR"
+  Pop $0
+  DetailPrint "Remove from PATH returned=|$0|"
+  
   ; Remove registry keys
   DeleteRegKey HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Rainmeas"
   DeleteRegKey HKLM "Software\Rainmeas"
@@ -172,78 +183,8 @@ Section "Uninstall"
 
   ; Remove directories used
   RMDir "$INSTDIR"
-
-  ; Remove rainmeas from PATH
-  ReadEnvStr $R0 "PATH"
-  ; Remove our installation directory from the PATH
-  Push $R0
-  Push "$INSTDIR"
-  Call un.RemoveFromPath
-  Pop $R1
-  ; Write the updated PATH back to the registry
-  WriteRegStr HKLM "SYSTEM\CurrentControlSet\Control\Session Manager\Environment" "PATH" $R1
   
   ; Remove desktop shortcut
   Delete "$DESKTOP\Rainmeas.lnk"
 
 SectionEnd
-
-; Function to remove a directory from the PATH environment variable
-Function un.RemoveFromPath
-  Exch $0 ; directory to remove
-  Exch
-  Exch $1 ; PATH variable
-  Push $2
-  Push $3
-  Push $4
-  Push $5
-  
-  ; Backup the original PATH
-  StrCpy $2 $1
-  
-  ; Loop to find and remove all instances of the directory
-  loop:
-    ; Find the directory in the PATH
-    StrCpy $3 $2 1 0
-    StrCmp $3 "" done
-    StrCpy $4 $2 "" 0
-    StrCpy $5 $4 1 0
-    StrCmp $5 ";" 0 +2
-    StrCpy $4 $4 "" 1
-    StrCmp $4 $0 0 next
-    
-    ; Found the directory, remove it
-    StrLen $3 $0
-    StrCpy $4 $2 "" $3
-    StrCpy $2 $2 $3
-    StrCpy $2 $2$4
-    
-    Goto loop
-    
-    next:
-      StrCpy $3 $2 1 0
-      StrCmp $3 "" done
-      StrCpy $4 $2 "" 1
-      StrCpy $2 $4
-      Goto loop
-      
-  done:
-    ; Remove trailing semicolon if present
-    StrCpy $3 $2 "" -1
-    StrCmp $3 ";" 0 +2
-    StrCpy $2 $2 -1
-    
-    ; Remove leading semicolon if present
-    StrCpy $3 $2 1 0
-    StrCmp $3 ";" 0 +2
-    StrCpy $2 $2 "" 1
-    
-    ; Return the modified PATH
-    Pop $5
-    Pop $4
-    Pop $3
-    Exch $2
-    Exch
-    Pop $0
-    Exch $1
-FunctionEnd
