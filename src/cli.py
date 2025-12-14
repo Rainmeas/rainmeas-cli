@@ -66,7 +66,7 @@ class RainmeasCLI:
         
         # Install command
         install_parser = subparsers.add_parser("install", help="Install a package")
-        install_parser.add_argument("package", help="Package name and optional version (e.g., nurashadeweather or nurashadeweather@1.3.0)")
+        install_parser.add_argument("package", help="Package name and optional version (e.g., nurashadeweather or nurashadeweather@1.1.0)")
         
         # Remove command
         remove_parser = subparsers.add_parser("remove", help="Remove a package")
