@@ -37,21 +37,8 @@ def get_app_version():
     # Default version if VERSION file is not found
     return "0.0.1"
 
-def find_rainmeter_skin_root(start_path: str = ".") -> Optional[str]:
-    """Find the root of a Rainmeter skin by looking for key files/directories"""
-    current_path = os.path.abspath(start_path)
-    
-    while current_path != os.path.dirname(current_path):  # Not at root
-        # Look for typical Rainmeter skin indicators
-        if (os.path.exists(os.path.join(current_path, "@Resources")) or
-            os.path.exists(os.path.join(current_path, "Rainmeter.ini")) or
-            os.path.exists(os.path.join(current_path, "@Backup"))):
-            return current_path
-        
-        # Move up one directory
-        current_path = os.path.dirname(current_path)
-    
-    return None
+# Removed find_rainmeter_skin_root function as per user request
+# Not all skins have @Resources folder, so we don't check for skin directories
 
 def load_rainmeas_config(skin_root: str) -> Dict[str, Any]:
     """Load the rainmeas-package.json configuration file"""
@@ -69,11 +56,6 @@ def save_rainmeas_config(skin_root: str, config: Dict[str, Any]) -> None:
     
     with open(config_path, 'w') as f:
         json.dump(config, f, indent=2)
-
-def is_rainmeter_skin(path: str) -> bool:
-    """Check if a directory is a Rainmeter skin directory"""
-    return (os.path.exists(os.path.join(path, "@Resources")) or
-            os.path.exists(os.path.join(path, "Rainmeter.ini")))
 
 def get_installed_packages(skin_root: str) -> Dict[str, str]:
     """Get a dictionary of installed packages and their versions"""
