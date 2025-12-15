@@ -2,6 +2,9 @@ import os
 import json
 import shutil
 import sys
+import urllib.request
+import zipfile
+import tempfile
 from typing import Dict, Any, Optional
 
 # Handle PyInstaller environment
@@ -76,16 +79,40 @@ class Installer:
         # Download and extract package
         print(f"Installing {package_name}@{version}...")
         print(f"Download URL: {download_url}")
-        # In a real implementation, we would download and extract the package here
         
-        # For now, just create a placeholder directory
-        package_dir = os.path.join(self.modules_dir, package_name)
-        os.makedirs(package_dir, exist_ok=True)
+        # Create a temporary file for the downloaded ZIP
+        with tempfile.NamedTemporaryFile(suffix='.zip', delete=False) as tmp_file:
+            tmp_filename = tmp_file.name
         
-        # Create a placeholder file with version info
-        placeholder_file = os.path.join(package_dir, "README.md")
-        with open(placeholder_file, "w") as f:
-            f.write(f"# {package_name}\n\nInstalled version: {version}\nDownload URL: {download_url}\n")
+        try:
+            # Download the ZIP file
+            print("Downloading package...")
+            urllib.request.urlretrieve(download_url, tmp_filename)
+            
+            # Extract the ZIP file to the package directory
+            print("Extracting package...")
+            package_dir = os.path.join(self.modules_dir, package_name)
+            
+            # Remove existing package directory if it exists
+            if os.path.exists(package_dir):
+                shutil.rmtree(package_dir)
+            
+            # Extract ZIP file
+            with zipfile.ZipFile(tmp_filename, 'r') as zip_ref:
+                zip_ref.extractall(package_dir)
+            
+            # Clean up temporary file
+            os.unlink(tmp_filename)
+            
+            print("Package downloaded and extracted successfully")
+            
+        except Exception as e:
+            # Clean up temporary file if it exists
+            if 'tmp_filename' in locals() and os.path.exists(tmp_filename):
+                os.unlink(tmp_filename)
+            
+            print(f"Error downloading or extracting package: {e}")
+            return False
         
         # Update rainmeas config
         self._update_config(package_name, version)

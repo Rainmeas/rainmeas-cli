@@ -184,15 +184,88 @@ class RainmeasCLI:
     
     def update_package(self, package_name: str) -> int:
         """Update a specific package"""
-        print(f"Updating package: {package_name}")
-        # Placeholder implementation
-        return 0
+        if not self.installer:
+            print("Error: Not in a Rainmeter skin directory")
+            return 1
+        
+        # Check if package is installed
+        installed_packages = self.installer.list_installed_packages()
+        if package_name not in installed_packages:
+            print(f"Package '{package_name}' is not installed")
+            return 1
+        
+        # Get the latest version from registry
+        latest_version = self.registry.get_latest_version(package_name)
+        if not latest_version:
+            print(f"Could not determine latest version for package '{package_name}'")
+            return 1
+        
+        # Check if already at latest version
+        current_version = installed_packages[package_name]
+        if current_version == latest_version:
+            print(f"Package '{package_name}' is already at the latest version ({latest_version})")
+            return 0
+        
+        # Remove the current version
+        if not self.installer.remove_package(package_name):
+            print(f"Failed to remove current version of '{package_name}'")
+            return 1
+        
+        # Install the latest version
+        if self.installer.install_package(package_name, latest_version):
+            print(f"Successfully updated '{package_name}' from {current_version} to {latest_version}")
+            return 0
+        else:
+            print(f"Failed to install updated version of '{package_name}'")
+            return 1
     
     def update_all(self) -> int:
         """Update all packages"""
-        print("Updating all packages")
-        # Placeholder implementation
-        return 0
+        if not self.installer:
+            print("Error: Not in a Rainmeter skin directory")
+            return 1
+        
+        # Get installed packages
+        installed_packages = self.installer.list_installed_packages()
+        if not installed_packages:
+            print("No packages installed")
+            return 0
+        
+        updated_count = 0
+        failed_count = 0
+        
+        print("Checking for updates...")
+        
+        for package_name, current_version in installed_packages.items():
+            # Get the latest version from registry
+            latest_version = self.registry.get_latest_version(package_name)
+            if not latest_version:
+                print(f"Could not determine latest version for package '{package_name}'")
+                failed_count += 1
+                continue
+            
+            # Check if update is needed
+            if current_version != latest_version:
+                print(f"Updating '{package_name}' from {current_version} to {latest_version}...")
+                
+                # Remove the current version
+                if not self.installer.remove_package(package_name):
+                    print(f"Failed to remove current version of '{package_name}'")
+                    failed_count += 1
+                    continue
+                
+                # Install the latest version
+                if self.installer.install_package(package_name, latest_version):
+                    print(f"Successfully updated '{package_name}'")
+                    updated_count += 1
+                else:
+                    print(f"Failed to install updated version of '{package_name}'")
+                    failed_count += 1
+            else:
+                print(f"'{package_name}' is already up to date ({current_version})")
+        
+        print(f"\nUpdate summary: {updated_count} updated, {failed_count} failed")
+        return 0 if failed_count == 0 else 1
     
     def list_packages(self) -> int:
         """List installed packages"""
@@ -250,14 +323,67 @@ class RainmeasCLI:
     
     def verify(self) -> int:
         """Verify package integrity"""
-        print("Verifying packages...")
-        # Placeholder implementation
-        return 0
+        if not self.installer:
+            print("Error: Not in a Rainmeter skin directory")
+            return 1
+        
+        # Get installed packages
+        installed_packages = self.installer.list_installed_packages()
+        if not installed_packages:
+            print("No packages installed")
+            return 0
+        
+        verified_count = 0
+        missing_count = 0
+        
+        print("Verifying package integrity...")
+        
+        for package_name, version in installed_packages.items():
+            package_dir = os.path.join(self.installer.modules_dir, package_name)
+            if os.path.exists(package_dir):
+                print(f"✓ {package_name}@{version} - OK")
+                verified_count += 1
+            else:
+                print(f"✗ {package_name}@{version} - MISSING")
+                missing_count += 1
+        
+        print(f"\nVerification summary: {verified_count} verified, {missing_count} missing")
+        return 0 if missing_count == 0 else 1
     
     def clean(self) -> int:
         """Clean unused modules"""
-        print("Cleaning unused modules...")
-        # Placeholder implementation
+        if not self.installer:
+            print("Error: Not in a Rainmeter skin directory")
+            return 1
+        
+        # Get installed packages from config
+        installed_packages = self.installer.list_installed_packages()
+        
+        # Check modules directory
+        if not os.path.exists(self.installer.modules_dir):
+            print("No modules directory found")
+            return 0
+        
+        cleaned_count = 0
+        
+        # Iterate through directories in modules folder
+        for item in os.listdir(self.installer.modules_dir):
+            item_path = os.path.join(self.installer.modules_dir, item)
+            
+            # Check if it's a directory and not in installed packages
+            if os.path.isdir(item_path) and item not in installed_packages:
+                try:
+                    shutil.rmtree(item_path)
+                    print(f"Removed unused module: {item}")
+                    cleaned_count += 1
+                except Exception as e:
+                    print(f"Failed to remove {item}: {e}")
+        
+        if cleaned_count > 0:
+            print(f"Cleaned {cleaned_count} unused modules")
+        else:
+            print("No unused modules found")
+        
         return 0
     
     def version(self) -> int:

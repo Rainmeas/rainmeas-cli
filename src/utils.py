@@ -1,6 +1,7 @@
 import os
 import json
 import sys
+import time
 from typing import Dict, Any, Optional
 
 # Handle PyInstaller environment
@@ -78,3 +79,7 @@ def get_installed_packages(skin_root: str) -> Dict[str, str]:
     """Get a dictionary of installed packages and their versions"""
     config = load_rainmeas_config(skin_root)
     return config.get("packages", {})
+
+def get_current_timestamp() -> str:
+    """Get current timestamp as ISO format string"""
+    return time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())
