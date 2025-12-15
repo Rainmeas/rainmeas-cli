@@ -2,6 +2,7 @@ import sys
 import argparse
 from typing import List
 import os
+import json
 
 # Handle PyInstaller environment
 def resource_path(relative_path):
@@ -66,12 +67,12 @@ class RainmeasCLI:
         init_parser = subparsers.add_parser("init", help="Initialize Rainmeas in a Rainmeter skin")
         
         # Install command
-        install_parser = subparsers.add_parser("install", help="Install a package")
-        install_parser.add_argument("package", nargs="?", help="Package name and optional version (e.g., nurashadeweather or nurashadeweather@1.1.0)")
+        install_parser = subparsers.add_parser("install", help="Install a package or all packages from rainmeas-package.json")
+        install_parser.add_argument("package", nargs="?", help="Package name and optional version (e.g., nurashadeweather or nurashadeweather@1.1.0). If omitted, installs all packages from rainmeas-package.json in current directory.")
         
         # Alias for install command
-        i_parser = subparsers.add_parser("i", help="Install a package (alias for install)")
-        i_parser.add_argument("package", nargs="?", help="Package name and optional version (e.g., nurashadeweather or nurashadeweather@1.1.0)")
+        i_parser = subparsers.add_parser("i", help="Install a package or all packages from rainmeas-package.json (alias for install)")
+        i_parser.add_argument("package", nargs="?", help="Package name and optional version (e.g., nurashadeweather or nurashadeweather@1.1.0). If omitted, installs all packages from rainmeas-package.json in current directory.")
         
         # Remove command
         remove_parser = subparsers.add_parser("remove", help="Remove a package")
@@ -406,9 +407,6 @@ class RainmeasCLI:
         if not self.installer:
             print("Error: Not in a Rainmeter skin directory")
             return 1
-        
-        # Import json module
-        import json
         
         # Load the rainmeas-package.json file from current directory
         config_path = "rainmeas-package.json"
