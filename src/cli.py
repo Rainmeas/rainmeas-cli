@@ -358,8 +358,11 @@ class RainmeasCLI:
         # Removed skin directory check as per user request
         # Not all modules have @Resources folder, so we proceed without validation
         
-        # Get installed packages from config
+        # Get installed packages from config (explicitly requested packages)
         installed_packages = self.installer.list_installed_packages()
+        
+        # Get all actually installed packages on disk
+        actually_installed_packages = self.installer.list_actually_installed_packages()
         
         # Check modules directory
         if not os.path.exists(self.installer.modules_dir):
@@ -374,12 +377,27 @@ class RainmeasCLI:
             
             # Check if it's a directory and not in installed packages
             if os.path.isdir(item_path) and item not in installed_packages:
-                try:
-                    shutil.rmtree(item_path)
-                    print(f"Removed unused module: {item}")
-                    cleaned_count += 1
-                except Exception as e:
-                    print(f"Failed to remove {item}: {e}")
+                # Check if this package is a dependency of an installed package
+                is_dependency = False
+                for package_name, version in installed_packages.items():
+                    # Get package info to check dependencies
+                    package_info = self.registry.get_package_info(package_name)
+                    if package_info:
+                        dependencies = self.installer._get_package_dependencies(package_info, version)
+                        if item in dependencies:
+                            is_dependency = True
+                            break
+                
+                # Only remove if it's not a dependency
+                if not is_dependency:
+                    try:
+                        shutil.rmtree(item_path)
+                        print(f"Removed unused module: {item}")
+                        cleaned_count += 1
+                    except Exception as e:
+                        print(f"Failed to remove {item}: {e}")
+                else:
+                    print(f"Keeping dependency module: {item}")
         
         if cleaned_count > 0:
             print(f"Cleaned {cleaned_count} unused modules")

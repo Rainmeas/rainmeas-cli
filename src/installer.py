@@ -206,6 +206,26 @@ class Installer:
         """List all installed packages"""
         return self._get_installed_packages()
     
+    def list_actually_installed_packages(self) -> set:
+        """List all packages actually installed on disk by scanning the modules directory"""
+        installed_packages = set()
+        
+        # Check if modules directory exists
+        if not os.path.exists(self.modules_dir):
+            return installed_packages
+        
+        # Iterate through directories in modules folder
+        try:
+            for item in os.listdir(self.modules_dir):
+                item_path = os.path.join(self.modules_dir, item)
+                # Check if it's a directory
+                if os.path.isdir(item_path):
+                    installed_packages.add(item)
+        except Exception as e:
+            print(f"Error scanning modules directory: {e}")
+        
+        return installed_packages
+    
     def install_all_packages(self, packages: Dict[str, str]) -> bool:
         """Install all packages with dependency handling"""
         success_count = 0
