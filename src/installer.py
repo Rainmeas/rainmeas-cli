@@ -46,8 +46,10 @@ class Installer:
         self.modules_dir = os.path.join(skin_root, "@Resources", "@rainmeas-modules")
         # Track installed packages to avoid circular dependencies
         self._installed_packages: Set[str] = set()
+        # Track explicitly requested packages (not dependencies)
+        self._explicitly_requested_packages: Set[str] = set()
     
-    def install_package(self, package_name: str, version: str = "latest") -> bool:
+    def install_package(self, package_name: str, version: str = "latest", is_dependency: bool = False) -> bool:
         """Install a package and its dependencies"""
         # Check for circular dependency
         if package_name in self._installed_packages:
@@ -86,12 +88,16 @@ class Installer:
             print(f"Found dependencies for {package_name}@{version}:")
             for dep_name, dep_version in dependencies.items():
                 print(f"  Installing dependency: {dep_name}@{dep_version}")
-                if not self.install_package(dep_name, dep_version):
+                if not self.install_package(dep_name, dep_version, is_dependency=True):
                     print(f"Failed to install dependency {dep_name}@{dep_version}")
                     return False
         
         # Mark as being installed to prevent circular dependencies
         self._installed_packages.add(package_name)
+        
+        # Add to explicitly requested packages if not a dependency
+        if not is_dependency:
+            self._explicitly_requested_packages.add(package_name)
         
         # Create modules directory if it doesn't exist
         os.makedirs(self.modules_dir, exist_ok=True)
@@ -134,8 +140,9 @@ class Installer:
             print(f"Error downloading or extracting package: {e}")
             return False
         
-        # Update rainmeas config
-        self._update_config(package_name, version)
+        # Update rainmeas config only for explicitly requested packages, not dependencies
+        if not is_dependency:
+            self._update_config(package_name, version)
         
         print(f"Successfully installed {package_name}@{version}")
         return True
@@ -144,8 +151,11 @@ class Installer:
         """Get dependencies for a specific package version"""
         versions = package_info.get("versions", {})
         
-        # Check if dependencies are defined at the versions level (same level as version keys)
-        return versions.get("dependencies", {})
+        # Check if dependencies are defined at the version level
+        if version in versions and isinstance(versions[version], dict):
+            return versions[version].get("dependencies", {})
+            
+        return {}
     
     def remove_package(self, package_name: str) -> bool:
         """Remove a package"""
@@ -205,6 +215,11 @@ class Installer:
         
         # Reset the installed packages tracker for this session
         self._installed_packages.clear()
+        self._explicitly_requested_packages.clear()
+        
+        # Add all packages to explicitly requested packages
+        for package_name in packages.keys():
+            self._explicitly_requested_packages.add(package_name)
         
         for package_name, version in packages.items():
             # Handle @latest version specifier
