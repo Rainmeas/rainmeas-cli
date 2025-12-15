@@ -3,6 +3,7 @@ import argparse
 from typing import List
 import os
 import json
+import shutil
 
 # Handle PyInstaller environment
 def resource_path(relative_path):
